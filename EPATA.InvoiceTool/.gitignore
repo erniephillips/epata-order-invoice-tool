@@ -1,0 +1,5 @@
+bin/
+obj/
+App_Data/*.sqlite
+App_Data/*.sqlite-shm
+App_Data/*.sqlite-wal

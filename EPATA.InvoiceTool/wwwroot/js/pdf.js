@@ -22,6 +22,7 @@ export function renderInvoiceHtml(input, options = {}) {
   const docNumberLabel = d.docType === 'INVOICE' ? 'Invoice #' : 'Estimate #';
   const dueDateLabel = d.docType === 'INVOICE' ? 'Due Date' : 'Valid Until';
   const totalLabel = d.docType === 'INVOICE' ? 'Balance<br>Due' : 'Estimated<br>Total';
+  const summaryTotalValue = d.docType === 'INVOICE' ? Math.max(0, d.balance) : d.total;
   const statusStamp = buildStatusStamp(d.status);
   const rows = buildRows(d);
   const autoPrintScript = options.autoPrint
@@ -111,7 +112,7 @@ export function renderInvoiceHtml(input, options = {}) {
                 ${summaryRow(`Tax (${formatTaxRate(d.docTaxRate)}%)`, money(d.taxAmount))}
                 <div class="d-flex align-items-end justify-content-between mt-3">
                   <div class="summary-total-label">${totalLabel}</div>
-                  <div class="summary-total-value">${money(d.balance)}</div>
+                  <div class="summary-total-value">${money(summaryTotalValue)}</div>
                 </div>
               </div>
             </section>

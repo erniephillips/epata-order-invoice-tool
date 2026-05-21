@@ -299,8 +299,8 @@ export function newDocument(type = 'ESTIMATE', nextNumber = '') {
   setVal('amountPaid',    '0');
   setVal('pricingGuide', DEFAULT_PRICING_GUIDE);
   setVal('termsNotes', type === 'INVOICE' ? DEFAULT_INVOICE_TERMS_NOTES : DEFAULT_TERMS_NOTES);
-  setVal('standardTurnaround', '3-5 business days');
-  setVal('rushTurnaround', '1-2 Business Days (subject to availability)');
+  setVal('standardTurnaround', 'Quoted after design review and schedule confirmation');
+  setVal('rushTurnaround', 'Rush timing available only when schedule allows');
 
   const tbody = el('lineItemsBody');
   if (tbody) tbody.innerHTML = '';

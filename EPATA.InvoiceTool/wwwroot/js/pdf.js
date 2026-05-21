@@ -40,9 +40,9 @@ export function renderInvoiceHtml(input, options = {}) {
 <body class="bg-body-secondary text-body">
   <main class="epata-page position-relative bg-white overflow-hidden mx-auto shadow-lg">
     <header class="epata-header position-relative flex-shrink-0">
-      <img class="top-logo position-absolute object-fit-contain z-3" alt="EPATA 3D Prints logo" src="${ASSET_ROOT}/epata-top-logo.png" />
+      <img class="top-logo position-absolute object-fit-contain z-3" alt="EPATA 3D Prints logo" src="${ASSET_ROOT}/epata-top-logo_new.png" />
 
-      <h1 class="top-title position-absolute m-0 lh-1 text-nowrap fw-bold z-3 pt-2">${esc(d.businessName)}</h1>
+      <h1 class="top-title position-absolute m-0 lh-1 text-nowrap z-3">${esc(d.businessName)}</h1>
 
       <div class="contact-block position-absolute d-flex flex-column gap-2 z-3 mt">
         ${contactRow('location', d.businessLocation)}
@@ -108,7 +108,7 @@ export function renderInvoiceHtml(input, options = {}) {
                 ${summaryRow('Subtotal', money(d.subtotal))}
                 ${summaryRow('Discount', '-' + money(d.discountAmount))}
                 ${summaryRow(`Rush Fee (${d.docRushPercent.toFixed(0)}%)`, money(d.rushAmount))}
-                ${summaryRow(`Tax (${d.docTaxRate.toFixed(2)}%)`, money(d.taxAmount))}
+                ${summaryRow(`Tax (${formatTaxRate(d.docTaxRate)}%)`, money(d.taxAmount))}
                 <div class="d-flex align-items-end justify-content-between mt-3">
                   <div class="summary-total-label">${totalLabel}</div>
                   <div class="summary-total-value">${money(d.balance)}</div>
@@ -156,7 +156,7 @@ export function renderInvoiceHtml(input, options = {}) {
 
           <div class="col-4">
             <section class="small-panel">
-              <div class="panel-label">${d.docType === 'INVOICE' ? 'Payment Status' : 'Approval'}</div>
+              <div class="panel-label">${actionPanelLabel(d)}</div>
               <div class="panel-body">
                 ${actionPanel(d, title)}
               </div>
@@ -175,7 +175,7 @@ export function renderInvoiceHtml(input, options = {}) {
           <div class="thanks-sub mt-3 lh-1 text-nowrap">We appreciate your business.</div>
         </section>
 
-        <img class="printer-logo object-fit-contain flex-shrink-0" alt="Turnaround printer logo" src="${ASSET_ROOT}/turnaround-printer-logo.png" />
+        <img class="printer-logo object-fit-contain flex-shrink-0" alt="Turnaround printer logo" src="${ASSET_ROOT}/turnaround-printer-logo_new.png" />
 
         <section class="turnaround-block">
           <div class="footer-heading mb-2 fw-bold text-uppercase lh-1 text-nowrap">TURNAROUND TIME (ESTIMATED)</div>
@@ -248,22 +248,24 @@ function invoiceStyles() {
 
     .top-logo {
       left: 22px;
-      top: 34px;
-      width: 126px;
-      height: 176px;
+      top: 82px;
+      width: 150px;
+      height: 150px;
     }
 
     .top-title {
-      left: 158px;
-      top: 40px;
-      font-size: 32px;
+      left: 22px;
+      top: 34px;
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 38px;
       font-weight: 900;
-      letter-spacing: -1.2px;
+      letter-spacing: -1px;
+      line-height: 1;
     }
 
     .contact-block {
-      left: 158px;
-      top: 100px;
+      left: 200px;
+      top: 92px;
     }
 
     .contact-row {
@@ -747,14 +749,49 @@ function buildStatusStamp(status) {
   const normalized = String(status || 'Draft').trim();
   if (!normalized) return '';
   const statusKey = normalized.toLowerCase().replace(/[^a-z0-9]+/g, '-');
-  const knownClass = ['draft', 'sent', 'paid', 'void'].includes(statusKey) ? statusKey : 'draft';
+  // "Accepted" (estimate closed) gets the same green PAID styling.
+  const styleKey = statusKey === 'accepted' ? 'paid' : statusKey;
+  const knownClass = ['draft', 'sent', 'paid', 'void'].includes(styleKey) ? styleKey : 'draft';
   return `<div class="status-stamp status-stamp-${knownClass} position-absolute text-uppercase">${esc(normalized)}</div>`;
 }
+
+function actionPanelLabel(d) {
+  if (d.docType === 'INVOICE') return 'Payment Status';
+  // Estimate panel label reflects what's actually in the panel now.
+  if (d.status === 'Accepted') return 'Accepted';
+  if (d.status === 'Void')     return 'Voided';
+  return 'Approval';
+}
+
+// Known default termsNotes templates — used to detect when the saved text is
+// still the "out of the box" template for the OTHER doc type, so we can swap.
+const ESTIMATE_DEFAULT_TERMS = `- This estimate is valid for 14 days from the date above.
+- Final price may vary based on model changes or unexpected print issues.
+- Payment is due before printing begins.
+- Thank you for supporting EPATA 3D Prints!`;
+
+const INVOICE_DEFAULT_TERMS = `- Payment is due by the due date shown above unless already paid.
+- This invoice reflects the approved work, materials, and services listed.
+- Paid invoices serve as a receipt for your records.
+- Thank you for supporting EPATA 3D Prints!`;
+
+const INVOICE_PAID_TERMS = `- Payment received in full — thank you!
+- This invoice serves as your receipt for the work listed above.
+- Please keep this document for your records.
+- We appreciate your support of EPATA 3D Prints!`;
+
+const ESTIMATE_ACCEPTED_TERMS = `- This estimate has been accepted.
+- The price above is locked in barring scope changes after approval.
+- Payment is due before printing begins.
+- Thank you for choosing EPATA 3D Prints!`;
 
 function normalizeData(input) {
   const d = { ...(input || {}) };
   d.docType = String(d.docType || 'ESTIMATE').toUpperCase();
   d.status = d.status || 'Draft';
+  // Migrate legacy values so old saved data still renders correctly.
+  if (d.docType === 'ESTIMATE' && d.status === 'Paid')     d.status = 'Accepted';
+  if (d.docType === 'INVOICE'  && d.status === 'Accepted') d.status = 'Paid';
   d.lineItems = Array.isArray(d.lineItems) ? d.lineItems : [];
   d.subtotal = num(d.subtotal);
   d.discountAmount = num(d.discountAmount);
@@ -763,7 +800,8 @@ function normalizeData(input) {
   d.total = num(d.total);
   d.amountPaid = num(d.amountPaid);
   d.balance = Number.isFinite(Number(d.balance)) ? num(d.balance) : Math.max(0, d.total - d.amountPaid);
-  if (d.status === 'Paid') {
+  // Both "Paid" (invoice) and "Accepted" (estimate) are closed-out states.
+  if (d.status === 'Paid' || d.status === 'Accepted') {
     d.amountPaid = d.total;
     d.balance = 0;
   }
@@ -789,16 +827,23 @@ Rush Fee
 - Add 25%-50%
 Material Notes
 - ABS/ASA prints include a 20%-35% handling surcharge due to increased time and risk.`;
-  d.termsNotes = d.termsNotes || (d.docType === 'INVOICE'
-    ? `- Payment is due by the due date shown above unless already paid.
-- This invoice reflects the approved work, materials, and services listed.
-- Paid invoices serve as a receipt for your records.
-- Thank you for supporting EPATA 3D Prints!`
-    : `- This estimate is valid for 14 days from the date above.
-- Final price may vary based on model changes or unexpected print issues.
-- Payment is due before printing begins.
-- Thank you for supporting EPATA 3D Prints!`);
+  // Pick the right default template for this doc type + status,
+  // and swap saved text that still matches a known default of the WRONG type.
+  const ideal = pickDefaultTerms(d.docType, d.status);
+  const current = String(d.termsNotes || '').trim();
+  const KNOWN_DEFAULTS = new Set(
+    [ESTIMATE_DEFAULT_TERMS, INVOICE_DEFAULT_TERMS, INVOICE_PAID_TERMS, ESTIMATE_ACCEPTED_TERMS]
+      .map(s => s.trim())
+  );
+  d.termsNotes = (!current || KNOWN_DEFAULTS.has(current)) ? ideal : d.termsNotes;
   return d;
+}
+
+function pickDefaultTerms(docType, status) {
+  if (docType === 'INVOICE') {
+    return status === 'Paid' ? INVOICE_PAID_TERMS : INVOICE_DEFAULT_TERMS;
+  }
+  return status === 'Accepted' ? ESTIMATE_ACCEPTED_TERMS : ESTIMATE_DEFAULT_TERMS;
 }
 
 function contactRow(type, value) {
@@ -884,20 +929,57 @@ function bulletList(value, className = '') {
 
 function actionPanel(d, title) {
   if (d.docType === 'INVOICE') {
-    const paid = d.status === 'Paid' || d.balance <= 0;
+    return invoiceActionPanel(d);
+  }
+  return estimateActionPanel(d, title);
+}
+
+function invoiceActionPanel(d) {
+  const headline = {
+    Paid:  'Payment received. Thank you!',
+    Sent:  'Payment is due for this invoice.',
+    Draft: 'Draft invoice — not yet sent for payment.',
+    Void:  'This invoice has been voided and is no longer payable.',
+  }[d.status] || 'Payment is due for this invoice.';
+
+  return `
+    <p class="fw-bold mb-3">${headline}</p>
+    <div class="summary-row"><span>Status</span><span>${esc(d.status)}</span></div>
+    <div class="summary-row"><span>Invoice Total</span><span>${money(d.total)}</span></div>
+    <div class="summary-row"><span>Amount Paid</span><span>${money(d.amountPaid)}</span></div>
+    <div class="d-flex align-items-end justify-content-between mt-3">
+      <div class="summary-total-label">Balance<br>Due</div>
+      <div class="summary-total-value">${money(Math.max(0, d.balance))}</div>
+    </div>
+  `;
+}
+
+function estimateActionPanel(d, title) {
+  // Accepted: confirmation block, no blank signature lines.
+  if (d.status === 'Accepted') {
     return `
-      <p class="fw-bold mb-3">${paid ? 'Payment received. Thank you!' : 'Payment is due for this invoice.'}</p>
-      <div class="summary-row"><span>Status</span><span>${esc(d.status)}</span></div>
-      <div class="summary-row"><span>Invoice Total</span><span>${money(d.total)}</span></div>
-      <div class="summary-row"><span>Amount Paid</span><span>${money(d.amountPaid)}</span></div>
-      <div class="d-flex align-items-end justify-content-between mt-3">
-        <div class="summary-total-label">Balance<br>Due</div>
-        <div class="summary-total-value">${money(Math.max(0, d.balance))}</div>
-      </div>
+      <p class="fw-bold mb-3">This estimate has been accepted.</p>
+      <p>Work will proceed under the scope and pricing approved above. An invoice will be issued upon completion.</p>
+      <div class="summary-row"><span>Accepted on</span><span>${esc(prettyDate(d.docDate) || '—')}</span></div>
+      <div class="summary-row"><span>Approved Total</span><span>${money(d.total)}</span></div>
     `;
   }
 
+  // Void: cancellation block.
+  if (d.status === 'Void') {
+    return `
+      <p class="fw-bold mb-3">This estimate has been voided.</p>
+      <p>The pricing and scope above are no longer valid. Contact EPATA 3D Prints for a current quote.</p>
+    `;
+  }
+
+  // Draft preview: keep the signature block but mark it as preview-only.
+  // Sent (default): full approval signature block.
+  const draftNote = d.status === 'Draft'
+    ? '<p class="mb-3" style="color:#6b7280">Draft preview — for review before sending.</p>'
+    : '';
   return `
+    ${draftNote}
     <p>I approve this ${title.toLowerCase()} and authorize EPATA 3D Prints to begin work.</p>
 
     <div class="d-flex align-items-end gap-2 mt-5">
@@ -970,6 +1052,12 @@ function displayWebsite(value) {
 function num(value) {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+function formatTaxRate(value) {
+  // Show up to 3 decimal places, trimming trailing zeros (e.g. 6.625, 6.6, 7)
+  const n = num(value);
+  return n.toFixed(3).replace(/\.?0+$/, '');
 }
 
 // Existing import kept for compatibility with older callers.

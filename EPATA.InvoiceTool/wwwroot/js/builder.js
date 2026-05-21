@@ -123,7 +123,9 @@ export function updateTotals() {
   const afterRush = subtotal - discount + rush;
   const tax      = afterRush * (val('docTaxRate') / 100);
   const total    = afterRush + tax;
-  const isPaid   = textVal('docStatus') === 'Paid';
+  // Treat estimate "Accepted" the same as invoice "Paid" — both mean closed/finalized
+  const closedStatus = textVal('docStatus');
+  const isPaid   = closedStatus === 'Paid' || closedStatus === 'Accepted';
   const paid     = isPaid ? total : val('amountPaid');
   const balance  = isPaid ? 0 : total - paid;
 
@@ -158,7 +160,43 @@ function onDocTypeChange() {
   const dueDateLabel = el('dueDateLabel');
   if (dueDateLabel) dueDateLabel.textContent = type === 'INVOICE' ? 'Due Date' : 'Valid Until';
 
+  // Adjust status dropdown — estimates can be Accepted, invoices can be Paid
+  syncStatusOptionsToDocType(type);
+
+  // Swap the default terms boilerplate when it still matches the OTHER type's default
+  syncTermsNotesToDocType(type);
+
   updateTotals();
+}
+
+function syncStatusOptionsToDocType(type) {
+  const sel = el('docStatus');
+  if (!sel) return;
+  const current = sel.value;
+
+  // Map between equivalents when switching types so we don't leave an invalid value
+  let remapped = current;
+  if (type === 'INVOICE' && current === 'Accepted') remapped = 'Paid';
+  else if (type === 'ESTIMATE' && current === 'Paid') remapped = 'Accepted';
+
+  const opts = type === 'INVOICE'
+    ? [['Draft','Draft'], ['Sent','Sent'], ['Paid','Paid'], ['Void','Void']]
+    : [['Draft','Draft'], ['Sent','Sent'], ['Accepted','Accepted'], ['Void','Void']];
+
+  sel.innerHTML = opts.map(([v, lbl]) => `<option value="${v}">${lbl}</option>`).join('');
+  sel.value = opts.some(([v]) => v === remapped) ? remapped : 'Draft';
+}
+
+function syncTermsNotesToDocType(type) {
+  const node = el('termsNotes');
+  if (!node) return;
+  const current = (node.value || '').trim();
+  // If user customized the text, leave it alone. Only swap when the text
+  // still matches one of the known default templates.
+  const KNOWN = [DEFAULT_TERMS_NOTES, DEFAULT_INVOICE_TERMS_NOTES].map(s => s.trim());
+  if (!current || KNOWN.includes(current)) {
+    setVal('termsNotes', type === 'INVOICE' ? DEFAULT_INVOICE_TERMS_NOTES : DEFAULT_TERMS_NOTES);
+  }
 }
 
 // ── Capture / restore state ───────────────────────────
@@ -184,6 +222,10 @@ export function restoreState(state) {
   Object.entries(state.formValues ?? {}).forEach(([id, value]) => {
     if (!BUSINESS_IDS.includes(id) && el(id)) el(id).value = value;
   });
+
+  // Sync the status dropdown options + value to whatever docType was restored.
+  // Handles legacy data where an estimate was saved with status="Paid", etc.
+  syncStatusOptionsToDocType(textVal('docType') || 'ESTIMATE');
 
   const tbody = el('lineItemsBody');
   if (tbody) tbody.innerHTML = '';
@@ -229,7 +271,14 @@ export function getFormData() {
 export function newDocument(type = 'ESTIMATE', nextNumber = '') {
   const prefix = type === 'INVOICE' ? 'INV' : 'EST';
   setVal('docType', type);
+  // Rebuild the status dropdown for this type BEFORE picking a status,
+  // otherwise the Estimate dropdown will still be showing "Accepted" when
+  // the user changes from the default Draft value.
+  syncStatusOptionsToDocType(type);
   setVal('docStatus', 'Draft');
+  // Keep the due-date label in sync too.
+  const dueDateLabel = el('dueDateLabel');
+  if (dueDateLabel) dueDateLabel.textContent = type === 'INVOICE' ? 'Due Date' : 'Valid Until';
   setVal('docNumber', nextNumber);
   setVal('docDate', todayStr(0));
   setVal('dueDate', todayStr(type === 'INVOICE' ? 7 : 14));

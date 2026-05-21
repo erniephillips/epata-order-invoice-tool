@@ -153,6 +153,10 @@ export function pushToBuilder(calc, lineItemsFn, addLineItemFn) {
   if (!tbody) return;
   tbody.innerHTML = '';
 
+  // Round computed money values to cents to avoid JS float artifacts
+  // like 30.499999999999993 showing up in rate fields.
+  const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
+
   const addIf = (cond, desc, details, qty, rate) => {
     if (cond) addLineItemFn({ desc, details, qty, rate });
   };
@@ -161,7 +165,7 @@ export function pushToBuilder(calc, lineItemsFn, addLineItemFn) {
     desc: 'Print setup / file preparation',
     details: 'Slicing, orientation, supports, settings review, and project setup.',
     qty: 1,
-    rate: calc.setup,
+    rate: r2(calc.setup),
   });
 
   addIf(val('grams') > 0, 'Material usage',
@@ -178,11 +182,11 @@ export function pushToBuilder(calc, lineItemsFn, addLineItemFn) {
 
   addIf(calc.post > 0, 'Post-processing / handling',
     'Cleanup, support removal, packaging, or special handling.',
-    1, calc.post);
+    1, r2(calc.post));
 
   addIf(calc.difficultyFee > 0, 'Material / difficulty surcharge',
     `ABS/ASA or higher-risk print. Multiplier: ${calc.difficultyFactor.toFixed(2)}×`,
-    1, calc.difficultyFee);
+    1, r2(calc.difficultyFee));
 
   if (!tbody.children.length) addLineItemFn({});
 
@@ -190,7 +194,7 @@ export function pushToBuilder(calc, lineItemsFn, addLineItemFn) {
   const setV = (id, v) => { const e = el(id); if (e) e.value = v; };
   setV('docDiscount',    calc.discount.toFixed(2));
   setV('docRushPercent', String(Math.round(Math.max(0, (calc.rushFactor - 1) * 100))));
-  setV('docTaxRate',     val('taxRate').toFixed(2));
+  setV('docTaxRate',     val('taxRate').toFixed(3).replace(/\.?0+$/, ''));
 
   ['docDiscount', 'docRushPercent', 'docTaxRate'].forEach(id => {
     const node = el(id);

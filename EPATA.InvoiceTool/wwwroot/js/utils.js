@@ -73,10 +73,11 @@ export function toast(msg, type = 'info', duration = 3000) {
 // ── Status badge HTML ─────────────────────────────────
 export function statusBadge(status) {
   const map = {
-    Draft: 'status-draft',
-    Sent:  'status-sent',
-    Paid:  'status-paid',
-    Void:  'status-void',
+    Draft:    'status-draft',
+    Sent:     'status-sent',
+    Paid:     'status-paid',
+    Accepted: 'status-paid',   // shares the green "closed" styling
+    Void:     'status-void',
   };
   return `<span class="badge ${map[status] ?? 'badge-gray'}">${escapeHtml(status ?? 'Draft')}</span>`;
 }

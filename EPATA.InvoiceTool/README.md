@@ -34,7 +34,7 @@ From the project folder:
 DO NOT DELETE THE APP_DATA FOLDER! It contains the invoice records and is needed for the app to run properly.
 Under C:\Users\ernie\OneDrive\Documents\__EPATA 3D Print Business Folder\07_Websites and Listings\EPATA Invoice  - Estimate Generator\EPATA.InvoiceTool\bin\Release\net10.0\win-x64\publish
 
-dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
+dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=false
 ```
 
 Then go to:

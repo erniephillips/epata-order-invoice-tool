@@ -815,8 +815,8 @@ function normalizeData(input) {
   d.businessWebsite = d.businessWebsite || 'erniephillipsportfolio.com';
   d.businessEtsy = d.businessEtsy || 'etsy.com/shop/EPATA3dPrints';
   d.businessMakerWorld = d.businessMakerWorld || 'makerworld.com/en/@epata.llc';
-  d.standardTurnaround = d.standardTurnaround || 'Quoted after design review and schedule confirmation';
-  d.rushTurnaround = d.rushTurnaround || 'Rush timing available only when schedule allows';
+  d.standardTurnaround = d.standardTurnaround || 'Estimated timeline provided after design review and schedule confirmation';
+  d.rushTurnaround = d.rushTurnaround || 'Expedited service available upon request, subject to current workload';
   d.pricingGuide = d.pricingGuide || `Print-Only Jobs
 - $15 minimum, or $10 setup + $0.10/g + $2/hour
 Basic Modeling

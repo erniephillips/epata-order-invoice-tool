@@ -30,6 +30,9 @@ http://127.0.0.1:5057/index.html
 From the project folder:
 
 ```bash
+!!!!!!!!!!!!!!!!!!!!!!!!IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+GOTO: C:\Users\ernie\OneDrive\Documents\__EPATA 3D Print Business Folder\07_Websites and Listings\EPATA Invoice  - Estimate Generator\EPATA.InvoiceTool\bin\Release\net10.0\win-x64\publish
+And temp move the APP_DATA folder to keep records
 dotnet publish -c Release -r win-x64 --self-contained true /p:PublishSingleFile=true
 ```
 
